@@ -61,6 +61,19 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
+4. Set up your Groq API key:
+   
+   You need a Groq API key to use this application. You can get one by signing up at [console.groq.com](https://console.groq.com/).
+   
+   **Option 1**: Create a `.env` file in the project root:
+   ```
+   # Copy the example file
+   cp .env.example .env
+   # Edit the .env file and add your API key
+   ```
+   
+   **Option 2**: Input your API key directly in the Streamlit UI when prompted.
+
 ## Usage
 
 1. Run the Streamlit application:
@@ -68,10 +81,15 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-2. Upload a PDF document using the file uploader in the sidebar
-3. Wait for the document to be processed (a progress bar will show embedding generation progress)
-4. Ask questions about the document in the chat interface
-5. The AI will search for relevant content in the document and generate responses
+2. If you haven't set up the API key in a `.env` file, enter it in the sidebar when prompted.
+
+3. Upload a PDF document using the file uploader in the sidebar.
+
+4. Wait for the document to be processed (a progress bar will show embedding generation progress).
+
+5. Ask questions about the document in the chat interface.
+
+6. The AI will search for relevant content in the document and generate responses.
 
 ## Performance Considerations
 
