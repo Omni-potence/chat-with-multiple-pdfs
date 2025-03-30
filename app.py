@@ -5,12 +5,28 @@ from groq_api import GroqAPI
 import tempfile
 import time
 import gc
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Initialize session state
 if 'pdf_processor' not in st.session_state:
     st.session_state.pdf_processor = PDFProcessor()
 if 'groq_api' not in st.session_state:
-    st.session_state.groq_api = GroqAPI(api_key="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")
+    # Get API key from environment variable, or prompt user to enter it
+    api_key = os.getenv("GROQ_API_KEY", "")
+    
+    if not api_key:
+        st.sidebar.warning("⚠️ No GROQ_API_KEY found in environment variables.")
+        api_key = st.sidebar.text_input("Enter your Groq API key:", type="password")
+        if api_key:
+            st.session_state.groq_api = GroqAPI(api_key=api_key)
+        else:
+            st.sidebar.error("Please enter your Groq API key to use the chat functionality.")
+    else:
+        st.session_state.groq_api = GroqAPI(api_key=api_key)
+        
 if 'chat_history' not in st.session_state:
     st.session_state.chat_history = []
 if 'processed_files' not in st.session_state:
@@ -119,44 +135,49 @@ for message in st.session_state.chat_history:
     with st.chat_message(message["role"]):
         st.write(message["content"])
 
-# Chat input
-if prompt := st.chat_input("Ask a question about your PDF"):
-    # Add user message to chat history
-    st.session_state.chat_history.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.write(prompt)
-    
-    # Get relevant context from the PDF
-    with st.spinner("Searching for relevant information..."):
-        try:
-            relevant_chunks = st.session_state.pdf_processor.search(prompt)
-            if relevant_chunks:
-                context = "\n".join([chunk for chunk, _ in relevant_chunks])
-            else:
+# Check if Groq API is configured
+if 'groq_api' not in st.session_state:
+    st.warning("Please enter your Groq API key in the sidebar to enable the chat functionality.")
+else:
+    # Chat input
+    if prompt := st.chat_input("Ask a question about your PDF"):
+        # Add user message to chat history
+        st.session_state.chat_history.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.write(prompt)
+        
+        # Get relevant context from the PDF
+        with st.spinner("Searching for relevant information..."):
+            try:
+                relevant_chunks = st.session_state.pdf_processor.search(prompt)
+                if relevant_chunks:
+                    context = "\n".join([chunk for chunk, _ in relevant_chunks])
+                else:
+                    context = ""
+                    st.warning("No relevant context found in the document.")
+            except Exception as e:
+                st.error(f"Error searching document: {str(e)}")
                 context = ""
-                st.warning("No relevant context found in the document.")
-        except Exception as e:
-            st.error(f"Error searching document: {str(e)}")
-            context = ""
-    
-    # Get response from Groq API
-    with st.chat_message("assistant"):
-        try:
-            with st.spinner("Generating response..."):
-                response = st.session_state.groq_api.get_response(prompt, context)
-                st.write(response)
-            
-            # Add assistant response to chat history
-            st.session_state.chat_history.append({"role": "assistant", "content": response})
-        except Exception as e:
-            st.error(f"Error generating response: {str(e)}")
+        
+        # Get response from Groq API
+        with st.chat_message("assistant"):
+            try:
+                with st.spinner("Generating response..."):
+                    response = st.session_state.groq_api.get_response(prompt, context)
+                    st.write(response)
+                
+                # Add assistant response to chat history
+                st.session_state.chat_history.append({"role": "assistant", "content": response})
+            except Exception as e:
+                st.error(f"Error generating response: {str(e)}")
 
 # Clear buttons
 col1, col2 = st.columns([1, 5])
 with col1:
     if st.button("Clear Chat"):
         st.session_state.chat_history = []
-        st.session_state.groq_api.clear_history()
+        if 'groq_api' in st.session_state:
+            st.session_state.groq_api.clear_history()
         st.rerun()
 with col2:
     if st.button("Clear Document Cache"):
